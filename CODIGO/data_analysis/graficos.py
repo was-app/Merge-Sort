@@ -7,7 +7,6 @@ ALGORITHMS = ["bubble", "selection", "insertion", "merge"]
 INPUT_TYPES = ["Aleatorio", "Crescente", "Decrescente"]
 
 COLORS = {"bubble": "r", "selection": "g", "insertion": "b", "merge": "m"}
-MARKERS = {"Aleatorio": "o", "Crescente": "s", "Decrescente": "^"}
 
 data = {}
 for algo in ALGORITHMS:
@@ -17,40 +16,37 @@ for algo in ALGORITHMS:
         continue
     data[algo] = pd.read_csv(filepath)
 
-plt.figure(figsize=(10,6))
-for algo, df in data.items():
-    for tipo in INPUT_TYPES:
-        subset = df[df["tipo"] == tipo]
-        plt.plot(subset["n"], subset["tempo"], 
-                 marker=MARKERS[tipo], color=COLORS[algo], linestyle='-', 
-                 label=f"{algo.capitalize()} - {tipo}")
-plt.xscale("log")
-plt.yscale("log")
-plt.xlabel("Tamanho da entrada")
-plt.ylabel("Tempo médio (s)")
-plt.title("Comparação de tempo de execução")
-plt.legend()
-plt.grid(True, which="both", ls="--")
-plt.tight_layout()
-plt.savefig(os.path.join(DATA_DIR, "tempo_comparacao.png"))
-plt.close()
+# Intervalo desejado de tamanhos
+min_n, max_n = 1000, 300000
 
-plt.figure(figsize=(10,6))
-for algo, df in data.items():
-    for tipo in INPUT_TYPES:
-        subset = df[df["tipo"] == tipo]
-        plt.plot(subset["n"], subset["memoria"], 
-                 marker=MARKERS[tipo], color=COLORS[algo], linestyle='-', 
-                 label=f"{algo.capitalize()} - {tipo}")
-plt.xscale("log")
-plt.yscale("log")
-plt.xlabel("Tamanho da entrada")
-plt.ylabel("Memória máxima (KB)")
-plt.title("Comparação de consumo de memória")
-plt.legend()
-plt.grid(True, which="both", ls="--")
-plt.tight_layout()
-plt.savefig(os.path.join(DATA_DIR, "memoria_comparacao.png"))
-plt.close()
+# Configurações de escala
+SCALES = {
+    "loglog": ("log", "log"),
+    "linear": ("linear", "linear"),
+    "logx": ("log", "linear"),
+}
+
+for tipo in INPUT_TYPES:
+    for scale_name, (xscale, yscale) in SCALES.items():
+        plt.figure(figsize=(10,6))
+        for algo, df in data.items():
+            subset = df[(df["tipo"] == tipo) & (df["n"] >= min_n) & (df["n"] <= max_n)]
+            if subset.empty:
+                continue
+            plt.plot(subset["n"], subset["tempo"], 
+                     color=COLORS[algo], linestyle='-', 
+                     label=algo.capitalize())
+        
+        plt.xscale(xscale)
+        plt.yscale(yscale)
+        plt.xlabel("Tamanho da entrada", fontsize=22)
+        plt.ylabel("Tempo médio (s)", fontsize=22)
+        plt.xticks(fontsize=20)
+        plt.yticks(fontsize=20)
+        plt.grid(True, which="major", ls="--")
+        plt.legend(fontsize=20)
+        plt.tight_layout()
+        plt.savefig(os.path.join(DATA_DIR, f"tempo_{tipo.lower()}_{scale_name}.png"))
+        plt.close()
 
 print("Gráficos gerados em", DATA_DIR)

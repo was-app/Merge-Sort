@@ -6,8 +6,8 @@
 #include <sys/time.h>
 #include <string.h>
 
-#define NUM_REP 10
-#define SIZE_LIMIT 50000
+#define NUM_REP 5
+#define SIZE_LIMIT 50001
 
 long double diffTime(struct rusage *start, struct rusage *end) {
     long double s = start->ru_utime.tv_sec + start->ru_utime.tv_usec / 1000000.0L;
@@ -31,7 +31,7 @@ void run(const char *algoname, void (*sortfunc)(int[], int, unsigned long*, unsi
     unsigned long comp, desloc;
     struct rusage start, end;
     long double tempo;
-    long max_mem;
+    long mem_start, mem_end;
     const char *tipos_organizacao[] = {"Aleatorio","Crescente","Decrescente"};
 
     for (int organizacao = 0; organizacao < 3; organizacao++) {
@@ -47,6 +47,8 @@ void run(const char *algoname, void (*sortfunc)(int[], int, unsigned long*, unsi
             long soma_mem = 0;
 
             for (int i = 0; i < NUM_REP; i++) {
+                getrusage(RUSAGE_SELF, &start);
+                mem_start = start.ru_maxrss;
                 vetor = (int*) malloc(n * sizeof(int));
                 if (!vetor) {
                     perror("Erro de malloc");
@@ -63,17 +65,18 @@ void run(const char *algoname, void (*sortfunc)(int[], int, unsigned long*, unsi
 
                 comp = desloc = 0;
 
-                getrusage(RUSAGE_SELF, &start);
+                getrusage(RUSAGE_SELF, &start); 
+                long double t_start = diffTime(&start, &start);
                 sortfunc(vetor, n, &comp, &desloc);
                 getrusage(RUSAGE_SELF, &end);
 
                 tempo = diffTime(&start, &end);
-                max_mem = end.ru_maxrss;
+                mem_end = end.ru_maxrss;
 
                 soma_t += tempo;
                 soma_c += comp;
                 soma_d += desloc;
-                soma_mem += max_mem;
+                soma_mem += (mem_end - mem_start);
 
                 free(vetor);
             }
@@ -86,11 +89,16 @@ void run(const char *algoname, void (*sortfunc)(int[], int, unsigned long*, unsi
 }
 
 int main() {
-    long int tamanhos[] = {10, 100, 1000, 10000, 100000, 1000000};
+    long int tamanhos[] = {
+        50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 
+        2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000, 10000,
+        20000, 30000, 40000, 50000, 60000, 70000, 80000, 90000, 100000,
+        200000, 300000, 400000, 500000, 600000, 700000, 800000, 900000, 1000000
+    };
     int num_tamanhos = sizeof(tamanhos) / sizeof(tamanhos[0]);
 
     system("mkdir -p ../DADOS");
-
+    srand(42);
     run("merge", mergeSortWrapper, tamanhos, num_tamanhos, 0);
     run("selection", selectionSort, tamanhos, num_tamanhos, 1);
     run("insertion", insertionSort, tamanhos, num_tamanhos, 1);
